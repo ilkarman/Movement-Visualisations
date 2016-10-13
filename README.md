@@ -4,7 +4,7 @@ Exploring different ways of using Python and R to create visualisations from int
 
 ##1. Cycling Data (One Day of TFL Rentals)
 
-![alt tag](01_TFL_Bikes/tfl_cycle_hires.gif)
+![alt tag](01_TFL_Bikes/daily.png)
 
 
 
