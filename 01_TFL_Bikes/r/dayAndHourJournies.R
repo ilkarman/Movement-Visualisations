@@ -122,9 +122,15 @@ for (i in 1:nrow(cycleJourniesSum)) {
 
 # Bind individual journies
 cyclePaths <- do.call(rbind, cycleLegs)
+
 # Attach to data
 mergedPaths <- cyclePaths %>%
   left_join(cycleJourniesSum, by = c("id" = "id"))  
+
+# Save & Load
+write.csv(mergedPaths, 'route_data.csv', row.names=FALSE)
+mergedPaths <- read.csv('route_data.csv')
+
 # Collapse by segments
 dayJournies <- mergedPaths %>% 
   group_by(from_lat, from_lon, to_lat, to_lon, countBikes) %>%
@@ -142,8 +148,10 @@ proj4string(CP) <- CRS(proj4string(buildings))
 buildingsClip <- gIntersection(buildings, CP, byid=TRUE)
 
 #Remove axis
-xquiet<- scale_x_continuous("", breaks=NULL)
-yquiet<-scale_y_continuous("", breaks=NULL)
+#xquiet<- scale_x_continuous("", breaks=NULL)
+#yquiet<-scale_y_continuous("", breaks=NULL)
+xquiet<-scale_x_continuous(expand=c(0,0), breaks=NULL)
+yquiet<-scale_y_continuous(expand=c(0,0), breaks=NULL)
 quiet<-list(xquiet, yquiet)
 
 # Plot
@@ -198,46 +206,53 @@ hourJournies <- routeHourlyData %>%
 
 # Plot
 for (hr in levels(factor(hourJournies$hourBin))) {
-  
   hourJourney = hourJournies[hourJournies$hourBin == hr,]
   print(nrow(hourJourney))
-  
   # Plot
   ggplot() +
-    
     #   Buildings as background
     geom_polygon(data=buildingsClip, aes(long, lat, group=group),
                  color=NA, fill='#0C090A', size=1, alpha=0.2) +
-    
     # Plot journies
     geom_segment(data=hourJourney, aes(x=from_lon, xend = to_lon, 
                                        y=from_lat, yend = to_lat,
                                        alpha = countBikesSum),
                  colour='skyblue1') +
-    
     # Plot stations
     geom_point(data=cycleLocs, aes(x=lon, y=lat),
-               colour='white', alpha=0.8, size=0.2)  +  
-    
+               colour='white', alpha=0.8, size=0.2)  + 
+    # Time annotation
+    annotate("text", x = -0.028, y = 51.454,
+           label = paste0("02 Oct 16 - ", hr),
+           size = 14,
+           colour = "white") + 
+    # Background blank
     theme(panel.background = element_rect(fill='#2C3539', colour='#2C3539'),
-          plot.background = element_rect(fill='#2C3539', colour='#2C3539'),
-          plot.title = element_text(colour = "white"),
-          legend.position="none",
-          plot.margin=unit(c(0,0,0,0), "mm")) +
-
-    #http://geepeeex.com/LongitudesAndLatitudes.htm
-    quiet + coord_equal(ratio=122/78) 
-    
-    # Time
-    ggtitle(paste0("TFL Cycle Hires - 02 October 2016 - ", hr))
-    
+        # Everything apart from panel is blank
+        axis.text.y=element_blank(),
+        panel.margin = unit(c(0,0,0,0), "lines"),
+        axis.text.x=element_blank(),
+        axis.ticks=element_blank(),
+        axis.ticks.length = unit(0,"null"),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        legend.position="none",
+        panel.grid = element_blank(),
+        title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.margin = unit(0,"null"),
+        plot.margin = rep(unit(0,"null"),4),
+        axis.ticks.length = unit(0,"cm")) +
+    # No labels
+    scale_x_continuous(expand=c(0,0)) +
+    scale_y_continuous(expand=c(0,0)) + 
+    labs(x=NULL, y=NULL, title=NULL)
   # Save
-  fname = gsub(":","_",paste(hr, "cycle_journies_v2.png", sep="_"))
-  ggsave(fname, width=20, height=10, dpi=200)
-  
+  fname = gsub(":","_",paste(hr, "cycle_journies.png", sep="_"))
+  ggsave(fname, width=16, height=10, dpi=200)
 }
 
 # GIF
 print("Install ImageMagick")
-system('magick convert -delay 80 *cycle_journies_v2.png tfl_cycle_hires.gif')
-
+system('magick convert -delay 80 *cycle_journies.png tfl_cycle_hires.gif')

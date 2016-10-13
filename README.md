@@ -8,6 +8,7 @@ Bing Directions API is used to 'guess' a cycling route between origin-destinatio
 
 ![alt tag](01_TFL_Bikes/daily.png)
 
+![alt tag](01_TFL_Bikes/hourly.gif)
 
 ##2. Tube Data (One Day of Oyster Journies)
 
