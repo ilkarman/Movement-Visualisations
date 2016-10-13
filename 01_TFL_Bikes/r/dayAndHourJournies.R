@@ -1,19 +1,31 @@
 # Draft - Ilia Karmanov - 13/10/2016
-#http://cycling.data.tfl.gov.uk/
+#
+# http://cycling.data.tfl.gov.uk/
+#
+# Changes:
+# 1. Use coord_map instead of coord_equal
+# 2. Use gganimate() instead of API call
+# 3. Fix crop, title, etc for animation
+# 4. Error-handling to API download call
+
 library(jsonlite)
 library(dplyr)
 library(rgdal)
+library(rgeos)
+library(raster)
 library(stringi)
 library(ggplot2)
-
-# Constants
-ONLINEPOINTS <- "https://api.tfl.gov.uk/BikePoint?app_id=&app_key="
-ONLINEUSAGE <- "http://cycling.data.tfl.gov.uk/usage-stats/25JourneyDataExtract28Sep2016-04Oct2016.csv"
-BINGKEY <- "REGISTER_WITH_BING_TO_GET_THIS"
+library(grid)
 
 # Working environment
 cyclePath <- "C:/Users/ilkarman/Desktop/cycleHire/"
 setwd(cyclePath)
+
+# Constants
+ONLINEPOINTS <- "https://api.tfl.gov.uk/BikePoint?app_id=&app_key="
+ONLINEUSAGE <- "http://cycling.data.tfl.gov.uk/usage-stats/25JourneyDataExtract28Sep2016-04Oct2016.csv"
+BINGKEY <- "REGISTER_WITH_BING"
+BUILDINGS <- "TQTL_LON"  # https://docs.google.com/uc?id=0B0kRhiw4fD7uQzU3MzBMRzFfSFk&export=download
 
 # Read in Stations
 cycleLocs <- fromJSON(ONLINEPOINTS,
@@ -67,8 +79,7 @@ cycleJourniesSum <- cycleJournies %>%
 # ID
 cycleJourniesSum <- na.omit(cycleJourniesSum)
 cycleJourniesSum <- cbind(id=seq(nrow(cycleJourniesSum)), cycleJourniesSum)
-# TEST (first 5000)
-#cycleJourniesSum <- cycleJourniesSum[1:5000,]
+
 # Get route segments
 # No error-handling ....
 get_route <- function(id, from, to) {
@@ -119,9 +130,16 @@ dayJournies <- mergedPaths %>%
   group_by(from_lat, from_lon, to_lat, to_lon, countBikes) %>%
   summarise(countBikesSum = sum(countBikes)) %>%
   arrange(countBikesSum) 
+
 # Buildings background
-buildings <- readOGR(cyclePath, layer="TQTL_LON") 
+buildings <- readOGR(substr(cyclePath, 1, nchar(cyclePath)-1), layer=BUILDINGS) 
 buildings <- spTransform(buildings, CRS("+proj=longlat +datum=WGS84"))
+
+# Clip to extend of our data
+# (xmin, xmax, ymin, ymax)
+CP <- as(extent(-0.245, 0.026, 51.556, 51.449), "SpatialPolygons")
+proj4string(CP) <- CRS(proj4string(buildings))
+buildingsClip <- gIntersection(buildings, CP, byid=TRUE)
 
 #Remove axis
 xquiet<- scale_x_continuous("", breaks=NULL)
@@ -130,27 +148,27 @@ quiet<-list(xquiet, yquiet)
 
 # Plot
 ggplot() +
-  
+    
   #   Buildings as background
-  #geom_polygon(data=buildings, aes(long, lat, group=group),
-  #             color=NA, fill='#0C090A', size=1, alpha=0.3) +
-  
+  geom_polygon(data=buildingsClip, aes(long, lat, group=group),
+               color=NA, fill='#0C090A', size=1, alpha=0.2) +
+    
   # Plot journies
   geom_segment(data=dayJournies, aes(x=from_lon, xend = to_lon, 
                                      y=from_lat, yend = to_lat,
                                      alpha = countBikesSum),
                colour='SkyBlue1') +
-  
+
   # Plot stations
   geom_point(data=cycleLocs, aes(x=lon, y=lat),
-             colour='white', alpha=0.8, size=0.2)  +  
-  
+              colour='white', alpha=0.8, size=0.2)  +  
+    
   theme(panel.background = element_rect(fill='#2C3539', colour='#2C3539'),
         legend.position="none") +
-  
+    
   #http://geepeeex.com/LongitudesAndLatitudes.htm
   quiet + coord_equal(ratio=122/78) 
-
+    
 # Save
 ggsave("daily.png", width=20, height=10, dpi=200)
 
@@ -188,8 +206,8 @@ for (hr in levels(factor(hourJournies$hourBin))) {
   ggplot() +
     
     #   Buildings as background
-    #geom_polygon(data=buildings, aes(long, lat, group=group),
-    #             color=NA, fill='#0C090A', size=1, alpha=0.3) +
+    geom_polygon(data=buildingsClip, aes(long, lat, group=group),
+                 color=NA, fill='#0C090A', size=1, alpha=0.2) +
     
     # Plot journies
     geom_segment(data=hourJourney, aes(x=from_lon, xend = to_lon, 
@@ -204,21 +222,22 @@ for (hr in levels(factor(hourJournies$hourBin))) {
     theme(panel.background = element_rect(fill='#2C3539', colour='#2C3539'),
           plot.background = element_rect(fill='#2C3539', colour='#2C3539'),
           plot.title = element_text(colour = "white"),
-          legend.position="none") +
-    
+          legend.position="none",
+          plot.margin=unit(c(0,0,0,0), "mm")) +
+
     #http://geepeeex.com/LongitudesAndLatitudes.htm
-    quiet + coord_equal(ratio=122/78) + 
+    quiet + coord_equal(ratio=122/78) 
     
     # Time
     ggtitle(paste0("TFL Cycle Hires - 02 October 2016 - ", hr))
-  
+    
   # Save
-  fname = gsub(":","_",paste(hr, "cycle_journies.png", sep="_"))
-  ggsave(fname, width=10, height=5, dpi=200)
+  fname = gsub(":","_",paste(hr, "cycle_journies_v2.png", sep="_"))
+  ggsave(fname, width=20, height=10, dpi=200)
   
 }
 
 # GIF
 print("Install ImageMagick")
-system('magick convert -delay 50 *cycle_journies.png tfl_cycle_hires.gif')
+system('magick convert -delay 80 *cycle_journies_v2.png tfl_cycle_hires.gif')
 
