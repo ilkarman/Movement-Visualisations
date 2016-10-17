@@ -128,7 +128,7 @@ mergedPaths <- cyclePaths %>%
   left_join(cycleJourniesSum, by = c("id" = "id"))  
 
 # Save & Load
-write.csv(mergedPaths, 'route_data.csv', row.names=FALSE)
+#write.csv(mergedPaths, 'route_data.csv', row.names=FALSE)
 mergedPaths <- read.csv('route_data.csv')
 
 # Collapse by segments
@@ -255,4 +255,4 @@ for (hr in levels(factor(hourJournies$hourBin))) {
 
 # GIF
 print("Install ImageMagick")
-system('magick convert -delay 80 *cycle_journies.png tfl_cycle_hires.gif')
+system('magick convert  -resize 50% -delay 80 *cycle_journies.png tfl_cycle_hires.gif')
