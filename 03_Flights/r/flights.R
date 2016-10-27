@@ -23,15 +23,13 @@ TMINUTES = 1*60*24  # 24 Hours
 TLIM = (60/TFREQ)*TMINUTES  
 tcount = 0
 
-
 # Create SQLIte database
-flightsdb <- dbConnect(RSQLite::SQLite(), "flightData.db")
-
+FLIGHTSDB <- dbConnect(RSQLite::SQLite(), "flightData.db")
 TABLEDB <- gsub(" ","_",gsub(":","_",gsub("-","_",
                                           paste0("flightsJSON_",
                                                  Sys.time()))))
-
-dbSendQuery(flightsdb, paste0("create table ", TABLEDB, " (
+# Create Table
+dbSendQuery(FLIGHTSDB, paste0("create table ", TABLEDB, " (
             ica024 TEXT,
             callsign TEXT,
             origin_country TEXT,
@@ -64,14 +62,14 @@ urlToSQL <- function()
     sendTable$t <- t
     sendTable$sensors <- NULL
     
-    dbWriteTable(conn=flightsdb,
+    dbWriteTable(conn=FLIGHTSDB,
                  value = sendTable,
                  name = TABLEDB,
                  row.names = FALSE,
                  overwrite = FALSE,
                  append = TRUE)
     # Total rows:
-    totrows <- dbSendQuery(flightsdb, paste0("select Count(*) from ", TABLEDB))
+    totrows <- dbSendQuery(FLIGHTSDB, paste0("select Count(*) from ", TABLEDB))
     message("Total Rows: ",dbFetch(totrows))
     message("Success: ", tcount, " added: ", flights, " flights")
   }
@@ -87,4 +85,21 @@ while (tcount < TLIM) {
   tcount <- tcount + 1
 }
 
-dbDisconnect(flightsdb)
+# Close Connection
+dbDisconnect(FLIGHTSDB)
+
+# Get data from database
+# ...
+
+pnts2Country <- function(lats, lngs) { 
+  # Function to perform a point-in-polygon test
+  # and return country-name of a point
+  pnts <- cbind(lngs, lats)
+  worldMap <- getMap()
+  pointProj <- SpatialPoints(coords=pnts,
+                             proj4string=CRS(proj4string(worldMap)))
+  pointInPoly <- over(pointProj, worldMap)
+  countries <- data.frame(mappedCountry = pointInPoly$ADMIN,
+                          stringsAsFactors = FALSE)
+  countries
+}
