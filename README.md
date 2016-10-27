@@ -10,9 +10,17 @@ Bing Directions API is used to 'guess' a cycling route between origin-destinatio
 
 ![alt tag](01_TFL_Bikes/hourly.gif)
 
-##2. Tube Data (One Day of Oyster Journies)
+##2. Flight Data (from opensky-network)
+
+Scraping 24 hours worth of world-flights into an SQLite database. Minor GIS operations such as point-in-polygon to produce a visualisation which discerns inbound, outbound, and passing flights
+
+temp:
+![alt tag](03_Flights/flights.jpg)
+
+##3. Tube Data (One Day of Oyster Journies)
 
 A graph of the tube-network is created to estimate the shortest-path in the network
 
-![alt tag](02_TF_Oyster_Journies/tube.jpg)
+![alt tag](03_TF_Oyster_Journies/tube.jpg)
+
 

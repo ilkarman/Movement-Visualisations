@@ -1,5 +1,7 @@
 library(jsonlite)
 library(RSQLite)
+library(sp)
+library(rworldmap)
 
 setwd("C:\\Users\\ilkarman\\Documents\\GitHub\\Movement-Visualisations\\03_Flights\\r\\")
 live_url <- "https://opensky-network.org/api/states/all"
@@ -90,6 +92,16 @@ dbDisconnect(FLIGHTSDB)
 
 # Get data from database
 # ...
+
+# Data Transformation
+library(dpylr)
+# Sort by (ica024, t)
+# Drop if no country-from (for any obs within group)
+# Use last record to get country info
+# ica024, t, lat, lng, mappedCountry, originCountry, destCountry
+# Color = red if mappedCountry == originCountry (outbound)
+# Color = blue if mappedCountry == destCountry (inbound)
+# Else color = green (passing)
 
 pnts2Country <- function(lats, lngs) { 
   # Function to perform a point-in-polygon test
