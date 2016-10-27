@@ -21,6 +21,6 @@ temp:
 
 A graph of the tube-network is created to estimate the shortest-path in the network
 
-![alt tag](03_TF_Oyster_Journies/tube.jpg)
+![alt tag](03_TFL_Oyster_Journies/tube.jpg)
 
 
