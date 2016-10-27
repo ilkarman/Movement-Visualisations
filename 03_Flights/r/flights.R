@@ -91,25 +91,55 @@ while (tcount < TLIM) {
 dbDisconnect(FLIGHTSDB)
 
 # Get data from database
-# ...
+# Get data from SQL
+flightdata <- dbReadTable(FLIGHTSDB, TABLEDB)
 
-# Data Transformation
-library(dpylr)
-# Sort by (ica024, t)
+# Create ID using ICA024 and Callsign
+flightdata$callsign <- gsub("^\\s+|\\s+$", "", flightdata$callsign)
+flightdata <- flightdata[!(flightdata$callsign == "" ),]
+flightdata$ID <- paste(flightdata$ica024, flightdata$callsign, sep="_")
 
+# Select columns and sort
+flightdata <- flightdata %>%
+  select(ID, time_position, ica024, origin_country, callsign, latitude, longitude, on_ground) %>%
+  arrange(ID, time_position)
 
-# Drop duplicates (ignoring t)
-# Drop if no country-from (for any obs within group)
-# Drop if fewer than 100 points in a group
+# Deduplicate (ignoring time_position index; last column)
+flightdata <- flightdata[!duplicated(flightdata[,-1]),]
 
+# Complete Flights
+# Want flights which start-from and end-on the ground
 
-# Use last record to get country info
-# ica024, t, lat, lng, mappedCountry, originCountry, destCountry
-# Color = red if mappedCountry == originCountry (outbound)
-# Color = blue if mappedCountry == destCountry (inbound)
-# Else color = green (passing)
-# Replace color = purple if origin == dest (within flight) 
+# Split route into two chunks
+flightdata <- flightdata %>%
+  group_by(ID) %>%
+  arrange(time_position) %>%
+  mutate(mid = round(n()/2)) %>%
+  mutate(group_id = row_number())
 
+idx <- flightdata$group_id < flightdata$mid
+flightdata$leg = ""
+flightdata$leg[idx] = "A"
+flightdata$leg[!idx] = "B"
+
+# Boolean cast as text 
+flightdata$on_ground_int <- ifelse(flightdata$on_ground == "TRUE", 1, 0)
+
+# Check whether one of two legs of ID was on ground
+flightdata <- flightdata %>%
+  group_by(ID, leg) %>%
+  mutate(grounded = max(on_ground_int))
+
+# Check if both legs have been on ground
+flightdata <- flightdata %>%
+  group_by(ID) %>%
+  mutate(complete = min(grounded))
+
+# Keep only complete
+flightdata <- flightdata %>%
+  filter(complete == 1)
+
+# Map on country to point
 pnts2Country <- function(lats, lngs) { 
   # Function to perform a point-in-polygon test
   # and return country-name of a point
@@ -123,5 +153,7 @@ pnts2Country <- function(lats, lngs) {
   countries
 }
 
-# Plot ...
-library(ggplot2)
+flightdata$mappedCountry <- pnts2Country(flightdata$latitude, flightdata$longitude)
+
+# Check how many complete flights we have
+unique(flightdata$ID)
