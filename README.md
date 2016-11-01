@@ -14,7 +14,7 @@ Bing Directions API is used to 'guess' a cycling route between origin-destinatio
 
 Scraping 24 hours worth of world-flights into an SQLite database. Minor GIS operations such as point-in-polygon to produce a visualisation which discerns inbound, outbound, and passing flights
 
-![alt tag](02_Flights/flights_in_out.png)
+![alt tag](02_Flights/flights_in_out.jpg)
 
 ![alt tag](02_Flights/flights.jpg)
 
