@@ -138,20 +138,28 @@ plotFlights$status[plotFlights$origCountry == plotFlights$destCountry] <- "withi
 
 # Plot flights
 library(ggplot2)
+library(rworldxtra)
+library(rworldmap)
+
+worldMap <- fortify(getMap(resolution="high"))
+
+# IN
 
 ggplot() +
   
+  geom_polygon(data=worldMap, aes(x=long, y=lat, group=group),
+               fill='black', colour=NA) +
   # Plot airports
   # geom_point(data=flPoints, aes(x=longitude, y=latitude),
   #            colour='white', alpha=0.8, size=0.1)  +   
   
-  geom_path(aes(longitude, latitude, group=id), 
-            data=plotFlights[plotFlights$status != "within",],
-            color = 'black', alpha=0.1, size=0.5) +  
-  
-  geom_path(aes(longitude, latitude, group=id), 
-            data=plotFlights[plotFlights$status == "within",],
-            color = 'purple', alpha=0.1, size=0.5) +  
+  geom_path(aes(longitude, latitude, group=id),
+            data=plotFlights[plotFlights$status != "inbound",],
+            color = 'black', alpha=0.1, size=0.5) +
+
+  geom_path(aes(longitude, latitude, group=id),
+            data=plotFlights[plotFlights$status == "inbound",],
+            color = 'blue', alpha=0.1, size=0.5) +
 
   # Background blank
   theme(panel.background = element_rect(fill='#2C3539', colour='#2C3539'),
@@ -178,7 +186,55 @@ ggplot() +
   labs(x=NULL, y=NULL, title=NULL) +
   
   # Map
-  coord_map(projection = "mercator", xlim = c(-20, 30), ylim = c(35, 65)) +
+  coord_map(projection = "mercator", xlim = c(-20, 20), ylim = c(35, 65))
 
 # Save
-ggsave("flights_v3_with.png", width=20, height=10, dpi=200)
+ggsave("flights_v5_in.png", width=30, height=15, dpi=200)
+
+# OUT
+
+ggplot() +
+  
+  geom_polygon(data=worldMap, aes(x=long, y=lat, group=group),
+               fill='black', colour=NA) +
+  # Plot airports
+  # geom_point(data=flPoints, aes(x=longitude, y=latitude),
+  #            colour='white', alpha=0.8, size=0.1)  +   
+  
+  geom_path(aes(longitude, latitude, group=id),
+            data=plotFlights[plotFlights$status != "outbound",],
+            color = 'black', alpha=0.1, size=0.5) +
+  
+  geom_path(aes(longitude, latitude, group=id),
+            data=plotFlights[plotFlights$status == "outbound",],
+            color = 'red', alpha=0.1, size=0.5) +
+  
+  # Background blank
+  theme(panel.background = element_rect(fill='#2C3539', colour='#2C3539'),
+        # Everything apart from panel is blank
+        axis.text.y=element_blank(),
+        panel.margin = unit(c(0,0,0,0), "lines"),
+        axis.text.x=element_blank(),
+        axis.ticks=element_blank(),
+        axis.ticks.length = unit(0,"null"),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        legend.position="none",
+        panel.grid = element_blank(),
+        title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.margin = unit(0,"null"),
+        plot.margin = rep(unit(0,"null"),4),
+        axis.ticks.length = unit(0,"cm")) +
+  
+  # No labels
+  scale_x_continuous(expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) + 
+  labs(x=NULL, y=NULL, title=NULL) +
+  
+  # Map
+  coord_map(projection = "mercator", xlim = c(-20, 20), ylim = c(35, 65))
+
+# Save
+ggsave("flights_v5_out.png", width=30, height=15, dpi=200)
