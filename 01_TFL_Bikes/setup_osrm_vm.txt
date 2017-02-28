@@ -1,0 +1,110 @@
+// Create Ubuntu 16 VM on https://ms.portal.azure.com
+// SSH guide to get OSRM running
+
+// Based on : https://github.com/Project-OSRM/osrm-backend/wiki/Building-on-Ubuntu
+// And : https://www.digitalocean.com/community/tutorials/how-to-set-up-an-osrm-server-on-ubuntu-14-04
+
+// MINIMAL STEPS:
+
+ssh iliauk@osmrouting.uksouth.cloudapp.azure.com
+
+sudo-apt get update
+sudo-apt get upgrade
+sudo apt-get install unattended-upgrades
+
+echo Download Britain map file
+
+mkdir osrm
+cd osrm
+wget -O britain.osm.pbf http://download.geofabrik.de/europe/british-isles-latest.osm.pbf
+
+echo Build osrm-backend
+
+sudo apt-get install build-essential git cmake pkg-config \
+libbz2-dev libstxxl-dev libstxxl1v5 libxml2-dev \
+libzip-dev libboost-all-dev lua5.2 liblua5.2-dev libtbb-dev
+
+git clone https://github.com/Project-OSRM/osrm-backend.git
+
+cd osrm-backend
+mkdir build
+cd build
+cmake ..
+sudo make install
+
+echo Process map 
+cd ../..
+osrm-extract britain.osm.pbf -p osrm-backend/profiles/bicycle.lua
+osrm-contract britain.osrm
+
+echo Check server running
+sudo-apt get install tmux
+tmux
+osrm-routed britain.osrm
+//Ctrl+B, +D to detach
+
+// Check output working ...
+curl 'http://127.0.0.1:5000/route/v1/bicycle/-0.124572,51.500723;-0.181622,51.519497'
+tmux ls
+tmux a -t 0
+//Ctrl+C to close
+//Ctrl+B +D to detach
+
+// Running locally; could just port-forward 5000 and use that ...
+// Optional extra: reverse-proxy port 80 and start on restart
+
+// OPTIONAL STEPS:
+
+echo Optionally set-up a web service
+sudo apt-get install nginx
+sudo nano /etc/nginx/sites-available/osrm.conf
+
+// Insert below:
+upstream osrm {
+    server 0.0.0.0:5000;
+}
+
+server {
+    listen 80;
+    server_name osmrouting.uksouth.cloudapp.azure.com;
+
+    location /osrm/ {
+        proxy_pass http://osrm/;
+        proxy_set_header Host $http_host;
+    }
+}
+// Insert above
+
+//Ctrl+O to save
+//Ctrl+X to exit
+
+cd /etc/nginx/sites-enabled
+sudo ln -s /etc/nginx/sites-available/osrm.conf
+sudo service nginx reload
+sudo service nginx restart
+osrm-routed ~/osrm/britain.osrm
+
+// Port forward port 80
+
+Azure Portal -> Network Interfaces -> Select -> Network security group ->
+Select -> Inbound Security Rule -> Add (Name: OSRM, Port: 80)
+
+// Test below on another computer
+//http://osmrouting.uksouth.cloudapp.azure.com/osrm/route/v1/bicycle/-0.124572,51.500723;-0.181622,51.519497
+
+// Supervisor to run in background and restart
+sudo apt-get install supervisor
+sudo nano /etc/supervisor/conf.d/osrm.conf
+
+[program:osrm]
+directory=/home/iliauk/osrm
+command=/usr/local/bin/osrm-routed -p 5000 britain.osrm
+user=iliauk
+
+sudo service supervisor restart
+sudo supervisorctl status
+
+
+
+
+
